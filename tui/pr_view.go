@@ -139,6 +139,10 @@ func (m PRModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c":
 			return m, tea.Quit
+		case "q":
+			if m.step == prStepSuccess || m.step == prStepError {
+				return m, func() tea.Msg { return BackMsg{} }
+			}
 
 		case "esc":
 			switch m.step {

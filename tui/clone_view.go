@@ -91,6 +91,10 @@ func (m CloneModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c":
 			return m, tea.Quit
+		case "q":
+			if m.step == cloneStepSuccess || m.step == cloneStepError {
+				return m, func() tea.Msg { return BackMsg{} }
+			}
 
 		case "esc":
 			if m.step == cloneStepBrowsing {

@@ -82,6 +82,12 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
+	if _, ok := msg.(BackMsg); ok {
+		m.active = viewDashboard
+		m.loading = true
+		return m, m.loadProfileCmd()
+	}
+
 	// If we are in a sub-view, delegate message routing to the sub-model.
 	// All sub-views send BackMsg to return to the dashboard.
 	switch m.active {
@@ -195,10 +201,6 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.isLoggedIn = false
 		m.loading = false
 
-	case BackMsg:
-		m.active = viewDashboard
-		m.loading = true
-		return m, m.loadProfileCmd()
 	}
 
 	return m, tea.Batch(cmds...)
