@@ -1,158 +1,92 @@
-# ⚡ GravityCLI
+# GravityCLI
 
-> GitHub workflow management, reimagined for the terminal.
+GravityCLI is an interactive terminal client for common Git and GitHub workflows.
+It gives you a dashboard for authentication, repository cloning and management,
+branch switching, pull request work, and a local directory/git cockpit.
 
-GravityCLI is a powerful, modern CLI tool built with Go that simplifies GitHub workflows directly from your terminal. Designed for developers who want speed, productivity, and a cleaner GitHub experience without constantly switching between the browser and terminal.
+## Features
 
----
+- Interactive dashboard built with Bubble Tea and Lip Gloss
+- GitHub authentication with OAuth device flow or a personal access token
+- Search and clone authenticated GitHub repositories
+- Create, edit, and delete GitHub repositories
+- Switch or create local Git branches
+- View, open, create, and checkout pull requests
+- Navigate folders, stage files, commit, and push from a TUI
 
-## 🚀 Features
+## Installation
 
-- 🔐 Secure GitHub Authentication (OAuth)
-- 📂 Clone repositories instantly
-- 🌿 Branch management
-- 🔀 Create Pull Requests from terminal
-- 📋 List repositories and branches
-- 🎨 Clean and color-coded terminal interface
-- ⚡ Fast and lightweight performance
-- 🔧 Developer-friendly commands
-
----
-
-## 📸 Preview
-
-Coming soon...
-
-<!-- Add screenshots or terminal GIF here -->
-
----
-
-## 🛠️ Built With
-
-- **Go (Golang)**
-- **GitHub API**
-- **OAuth Authentication**
-- **JSON Configuration**
-- **CLI Architecture**
-
----
-
-## 📦 Installation
-
-### Clone the repository
+### From source
 
 ```bash
-git clone https://github.com/yourusername/gravitycli.git
+git clone https://github.com/Joeboi01/GravityCLI.git
+cd GravityCLI
+go build -o gravity .
 ```
 
-### Navigate into the project
+Then run:
 
 ```bash
-cd gravitycli
+./gravity
 ```
 
-### Install dependencies
+On Windows PowerShell:
 
-```bash
-go mod tidy
+```powershell
+.\gravity.exe
 ```
 
-### Run the application
+### Releases
+
+Prebuilt binaries should be published through GitHub Releases. Build artifacts
+are intentionally not committed to the repository.
+
+## Usage
+
+Run the app without arguments to open the main dashboard:
 
 ```bash
-go run main.go
+gravity
 ```
 
----
-
-## 🔑 Authentication
-
-GravityCLI uses **GitHub OAuth authentication** for secure access.
-
-When running the app for the first time:
-
-1. Sign in with GitHub
-2. Authorize GravityCLI
-3. Your credentials are securely stored locally
-
-No manual tokens required.
-
----
-
-## 📖 Usage
-
-### Clone a repository
+You can also jump directly into a workflow:
 
 ```bash
-gravity clone username/repository
-```
-
-### Create a Pull Request
-
-```bash
-gravity create-pr
-```
-
-### List branches
-
-```bash
+gravity auth
+gravity clone
+gravity repo
 gravity branches
+gravity pr
+gravity nav
 ```
 
-### Switch branches
+## Authentication
+
+GravityCLI supports two authentication modes:
+
+- OAuth device flow: paste a GitHub OAuth client ID, then authorize in the browser.
+- Personal access token: paste a token with the scopes needed for the workflows you use.
+
+Credentials are stored in your OS user config directory with restrictive file
+permissions. A future version should use the platform keychain for stronger
+secret storage.
+
+## Development
 
 ```bash
-gravity checkout branch-name
+go test ./...
+go vet ./...
+go run .
 ```
 
----
+## Roadmap
 
-## 🎯 Why GravityCLI?
+- Store credentials in the OS keychain
+- Publish signed release binaries with checksums
+- Add GitHub Actions workflow status views
+- Add issue management
+- Add broader test coverage for TUI flows
 
-Developers spend too much time switching between the browser and terminal for simple GitHub tasks.
+## License
 
-GravityCLI was created to bring everything into one seamless terminal experience — making GitHub workflows faster, simpler, and more enjoyable.
-
----
-
-## 🗺️ Roadmap
-
-- [ ] GitHub Issues Management
-- [ ] GitHub Actions Integration
-- [ ] Team Collaboration Commands
-- [ ] Repository Analytics
-- [ ] Plugin Support
-- [ ] Cross-platform binary releases
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome!
-
-If you'd like to improve GravityCLI:
-
-1. Fork the repository
-2. Create a new branch
-3. Make your changes
-4. Submit a Pull Request
-
----
-
-## ⭐ Support
-
-If you like this project, consider giving it a **star ⭐** on GitHub.
-
----
-
-## 📜 License
-
-This project is licensed under the MIT License.
-
----
-
-## 👨‍💻 Author
-
-Built with passion by **Oladele Joseph Osunmakinde**
-
-GitHub: https://github.com/Joeboi01
+MIT

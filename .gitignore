@@ -1,0 +1,18 @@
+# Build outputs
+/GravityCLI.exe
+/gravity
+/gravity.exe
+/dist/
+
+# Logs and captured terminal output
+*.log
+error_log.txt
+
+# Local config and editor files
+.env
+.vscode/
+.idea/
+
+# OS files
+Thumbs.db
+.DS_Store

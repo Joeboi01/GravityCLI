@@ -99,25 +99,34 @@ func CreateBranch(dir, name string) error {
 // GetStatusFiles lists modified, deleted, and untracked files.
 // Returns a slice of file paths that are not yet committed.
 func GetStatusFiles(dir string) ([]string, error) {
-	stdout, stderr, err := runGit(dir, "status", "--porcelain")
+	stdout, stderr, err := runGit(dir, "status", "--porcelain=v1")
 	if err != nil {
 		return nil, errors.New(stderr)
 	}
 
+	return parseStatusPorcelain(stdout), nil
+}
+
+func parseStatusPorcelain(stdout string) []string {
 	var files []string
 	lines := strings.Split(stdout, "\n")
 	for _, line := range lines {
-		line = strings.TrimSpace(line)
+		line = strings.TrimRight(line, "\r")
 		if line == "" {
 			continue
 		}
-		// status output format: XY filepath
-		// Where X/Y can be M (modified), A (added), D (deleted), ? (untracked), etc.
+		// Status output format: XY filepath. Renames are represented as
+		// "old -> new"; staging the new path is the useful default.
 		if len(line) > 3 {
-			files = append(files, line[3:])
+			path := strings.TrimSpace(line[3:])
+			if strings.Contains(path, " -> ") {
+				parts := strings.Split(path, " -> ")
+				path = parts[len(parts)-1]
+			}
+			files = append(files, strings.Trim(path, `"`))
 		}
 	}
-	return files, nil
+	return files
 }
 
 // Add stages the selected files.

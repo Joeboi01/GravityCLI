@@ -2,12 +2,16 @@ package tui
 
 import (
 	"context"
+	"net/http"
+	"time"
 
 	"GravityCLI/internal/browser"
 
 	"github.com/google/go-github/v60/github"
 	"golang.org/x/oauth2"
 )
+
+var httpClient = &http.Client{Timeout: 30 * time.Second}
 
 // GetGitHubClient initializes and returns an authenticated GitHub client.
 func GetGitHubClient(token string) *github.Client {
@@ -16,6 +20,7 @@ func GetGitHubClient(token string) *github.Client {
 		&oauth2.Token{AccessToken: token},
 	)
 	tc := oauth2.NewClient(ctx, ts)
+	tc.Timeout = httpClient.Timeout
 	return github.NewClient(tc)
 }
 
@@ -23,4 +28,3 @@ func GetGitHubClient(token string) *github.Client {
 func OpenBrowser(url string) error {
 	return browser.Open(url)
 }
-

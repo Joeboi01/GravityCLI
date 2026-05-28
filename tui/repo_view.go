@@ -20,14 +20,14 @@ import (
 type repoStep int
 
 const (
-	repoStepMenu      repoStep = iota // Top-level menu: Create / Edit / Delete
-	repoStepListRepos                 // List repos for Edit or Delete selection
-	repoStepCreateForm                // Create form
-	repoStepEditForm                  // Edit form (name, desc, visibility)
-	repoStepDeleteConfirm             // Type repo name to confirm delete
-	repoStepWorking                   // Spinner while API call runs
-	repoStepSuccess                   // Success card
-	repoStepError                     // Error card
+	repoStepMenu          repoStep = iota // Top-level menu: Create / Edit / Delete
+	repoStepListRepos                     // List repos for Edit or Delete selection
+	repoStepCreateForm                    // Create form
+	repoStepEditForm                      // Edit form (name, desc, visibility)
+	repoStepDeleteConfirm                 // Type repo name to confirm delete
+	repoStepWorking                       // Spinner while API call runs
+	repoStepSuccess                       // Success card
+	repoStepError                         // Error card
 )
 
 // repoAction tracks what action was chosen from the top menu
@@ -62,10 +62,10 @@ type RepoModel struct {
 	repoIndex int
 
 	// Create form fields
-	nameInput textinput.Model
-	descInput textinput.Model
-	isPrivate bool
-	addReadme bool
+	nameInput   textinput.Model
+	descInput   textinput.Model
+	isPrivate   bool
+	addReadme   bool
 	activeField int // 0=Name 1=Desc 2=Visibility 3=README 4=Submit
 
 	// Edit form fields (pre-loaded from selected repo)
@@ -591,16 +591,24 @@ func (m RepoModel) loadReposCmd() tea.Cmd {
 		ctx := context.Background()
 
 		opts := &github.RepositoryListByAuthenticatedUserOptions{
-			Sort:      "updated",
-			Direction: "desc",
+			Sort:        "updated",
+			Direction:   "desc",
 			ListOptions: github.ListOptions{PerPage: 50},
 		}
-		repos, _, err := client.Repositories.ListByAuthenticatedUser(ctx, opts)
-		if err != nil {
-			return repoListErrorMsg{err: fmt.Errorf("failed to list repositories: %w", err)}
+		var allRepos []*github.Repository
+		for {
+			repos, resp, err := client.Repositories.ListByAuthenticatedUser(ctx, opts)
+			if err != nil {
+				return repoListErrorMsg{err: fmt.Errorf("failed to list repositories: %w", err)}
+			}
+			allRepos = append(allRepos, repos...)
+			if resp == nil || resp.NextPage == 0 {
+				break
+			}
+			opts.Page = resp.NextPage
 		}
 
-		return repoListLoadedMsg{repos: repos}
+		return repoListLoadedMsg{repos: allRepos}
 	}
 }
 

@@ -357,31 +357,38 @@ func (m CloneModel) fetchUserRepos() tea.Cmd {
 			ListOptions: github.ListOptions{PerPage: 100},
 		}
 
-		repos, _, err := client.Repositories.ListByAuthenticatedUser(ctx, opt)
-		if err != nil {
-			return cloneErrorMsg{err: err}
-		}
-
 		var items []repoItem
-		for _, repo := range repos {
-			lang := "Markdown"
-			if repo.Language != nil {
-				lang = *repo.Language
-			}
-			desc := ""
-			if repo.Description != nil {
-				desc = *repo.Description
+		for {
+			repos, resp, err := client.Repositories.ListByAuthenticatedUser(ctx, opt)
+			if err != nil {
+				return cloneErrorMsg{err: err}
 			}
 
-			items = append(items, repoItem{
-				name:        repo.GetName(),
-				fullName:    repo.GetFullName(),
-				description: desc,
-				cloneURL:    repo.GetCloneURL(),
-				stars:       repo.GetStargazersCount(),
-				forks:       repo.GetForksCount(),
-				language:    lang,
-			})
+			for _, repo := range repos {
+				lang := "Unknown"
+				if repo.Language != nil {
+					lang = *repo.Language
+				}
+				desc := ""
+				if repo.Description != nil {
+					desc = *repo.Description
+				}
+
+				items = append(items, repoItem{
+					name:        repo.GetName(),
+					fullName:    repo.GetFullName(),
+					description: desc,
+					cloneURL:    repo.GetCloneURL(),
+					stars:       repo.GetStargazersCount(),
+					forks:       repo.GetForksCount(),
+					language:    lang,
+				})
+			}
+
+			if resp == nil || resp.NextPage == 0 {
+				break
+			}
+			opt.Page = resp.NextPage
 		}
 
 		return reposLoadedMsg(items)

@@ -49,10 +49,10 @@ type prListItem struct {
 }
 
 type PRModel struct {
-	step        prStep
-	dir         string
-	spinner     spinner.Model
-	err         error
+	step    prStep
+	dir     string
+	spinner spinner.Model
+	err     error
 
 	// Git & GitHub Context
 	repoOwner     string
@@ -342,7 +342,7 @@ func (m PRModel) View() string {
 			s.WriteString(StyleTextMuted.Render("  No active pull requests found.") + "\n\n")
 		} else {
 			var listPane strings.Builder
-			
+
 			// Display 6 items at a time
 			start := m.prIndex - 2
 			if start < 0 {
@@ -361,16 +361,16 @@ func (m PRModel) View() string {
 				pr := m.prList[i]
 				bullet := "  "
 				var titleStr string
-				
+
 				if i == m.prIndex {
 					bullet = " ❯ "
 					titleStr = StyleActiveItem.Render(fmt.Sprintf("#%d %s", pr.number, pr.title))
 				} else {
 					titleStr = StyleInactiveItem.Render(fmt.Sprintf("#%d %s", pr.number, pr.title))
 				}
-				
+
 				listPane.WriteString(bullet + titleStr + "\n")
-				listPane.WriteString(fmt.Sprintf("    by @%s • %s ➔ %s\n\n", 
+				listPane.WriteString(fmt.Sprintf("    by @%s • %s ➔ %s\n\n",
 					pr.author, StyleTextMuted.Render(pr.headRef), StyleTextSuccess.Render(pr.baseRef)))
 			}
 
@@ -382,7 +382,7 @@ func (m PRModel) View() string {
 				previewPane.WriteString(fmt.Sprintf("Title:    %s\n", activePR.title))
 				previewPane.WriteString(fmt.Sprintf("Author:   @%s\n\n", activePR.author))
 				previewPane.WriteString(fmt.Sprintf("Branches: %s ➔ %s\n\n", activePR.headRef, activePR.baseRef))
-				
+
 				desc := activePR.body
 				if len(desc) > 100 {
 					desc = desc[:97] + "..."
@@ -412,14 +412,14 @@ func (m PRModel) View() string {
 	case prStepDetails:
 		pr := m.selectedPR
 		s.WriteString(StyleSubtitle.Render(fmt.Sprintf("⚡ Pull Request #%d Details", pr.number)) + "\n\n")
-		
+
 		var infoPane strings.Builder
 		infoPane.WriteString(fmt.Sprintf("Title:      %s\n", StyleHighlight.Render(pr.title)))
 		infoPane.WriteString(fmt.Sprintf("Author:     @%s\n", pr.author))
 		infoPane.WriteString(fmt.Sprintf("From:       %s\n", StyleTextWarning.Render(pr.headRef)))
 		infoPane.WriteString(fmt.Sprintf("To (Base):  %s\n", StyleTextSuccess.Render(pr.baseRef)))
 		infoPane.WriteString(fmt.Sprintf("Created:    %s\n\n", pr.createdAt.Format("2006-01-02 15:04:05")))
-		
+
 		infoPane.WriteString(StyleTextMuted.Render("Description:") + "\n")
 		bodyText := pr.body
 		if bodyText == "" {
@@ -441,7 +441,7 @@ func (m PRModel) View() string {
 			Padding(1, 2).
 			Width(75).
 			Render(infoPane.String())
-			
+
 		s.WriteString(box + "\n\n")
 		s.WriteString(StyleTextMuted.Render("[c] Fetch & Checkout Locally • [o] Open in Browser • [Esc] Back to List") + "\n")
 
@@ -544,14 +544,20 @@ func (m PRModel) loadPRContextCmd() tea.Cmd {
 		ctx := context.Background()
 
 		// Fetch branches from GitHub
-		ghBranches, _, err := client.Repositories.ListBranches(ctx, owner, repo, &github.BranchListOptions{})
-		if err != nil {
-			return prErrorMsg{err: fmt.Errorf("failed to list GitHub repository branches: %w", err)}
-		}
-
 		var branches []string
-		for _, b := range ghBranches {
-			branches = append(branches, b.GetName())
+		branchOpts := &github.BranchListOptions{ListOptions: github.ListOptions{PerPage: 100}}
+		for {
+			ghBranches, resp, err := client.Repositories.ListBranches(ctx, owner, repo, branchOpts)
+			if err != nil {
+				return prErrorMsg{err: fmt.Errorf("failed to list GitHub repository branches: %w", err)}
+			}
+			for _, b := range ghBranches {
+				branches = append(branches, b.GetName())
+			}
+			if resp == nil || resp.NextPage == 0 {
+				break
+			}
+			branchOpts.Page = resp.NextPage
 		}
 
 		// Try to parse last commit message for smart default title
@@ -605,7 +611,7 @@ func parseGitHubRemote(remote string) (string, string, error) {
 	remote = strings.TrimSpace(remote)
 
 	// Regexp to match owner and repo from SSH or HTTPS URLs
-	re := regexp.MustCompile(`github\.com[:/]([^/]+)/([^.]+)(?:\.git)?`)
+	re := regexp.MustCompile(`github\.com[:/]([^/]+)/(.+?)(?:\.git)?/?$`)
 	matches := re.FindStringSubmatch(remote)
 	if len(matches) == 3 {
 		return matches[1], matches[2], nil
@@ -614,6 +620,10 @@ func parseGitHubRemote(remote string) (string, string, error) {
 	// Try standard url.Parse as fallback
 	u, err := url.Parse(remote)
 	if err == nil {
+		host := strings.TrimPrefix(u.Host, "www.")
+		if host != "github.com" {
+			return "", "", fmt.Errorf("remote URL is not a GitHub repository: %s", remote)
+		}
 		path := strings.TrimPrefix(u.Path, "/")
 		path = strings.TrimSuffix(path, ".git")
 		parts := strings.Split(path, "/")
@@ -642,28 +652,33 @@ func (m PRModel) loadPRListCmd() tea.Cmd {
 			ListOptions: github.ListOptions{PerPage: 50},
 		}
 
-		prs, _, err := client.PullRequests.List(ctx, m.repoOwner, m.repoName, opt)
-		if err != nil {
-			return prErrorMsg{err: fmt.Errorf("failed to fetch active pull requests: %w", err)}
-		}
-
 		var items []prListItem
-		for _, pr := range prs {
-			body := ""
-			if pr.Body != nil {
-				body = *pr.Body
+		for {
+			prs, resp, err := client.PullRequests.List(ctx, m.repoOwner, m.repoName, opt)
+			if err != nil {
+				return prErrorMsg{err: fmt.Errorf("failed to fetch active pull requests: %w", err)}
 			}
-			items = append(items, prListItem{
-				number:    pr.GetNumber(),
-				title:     pr.GetTitle(),
-				author:    pr.GetUser().GetLogin(),
-				state:     pr.GetState(),
-				createdAt: pr.GetCreatedAt().Time,
-				headRef:   pr.GetHead().GetRef(),
-				baseRef:   pr.GetBase().GetRef(),
-				body:      body,
-				htmlURL:   pr.GetHTMLURL(),
-			})
+			for _, pr := range prs {
+				body := ""
+				if pr.Body != nil {
+					body = *pr.Body
+				}
+				items = append(items, prListItem{
+					number:    pr.GetNumber(),
+					title:     pr.GetTitle(),
+					author:    pr.GetUser().GetLogin(),
+					state:     pr.GetState(),
+					createdAt: pr.GetCreatedAt().Time,
+					headRef:   pr.GetHead().GetRef(),
+					baseRef:   pr.GetBase().GetRef(),
+					body:      body,
+					htmlURL:   pr.GetHTMLURL(),
+				})
+			}
+			if resp == nil || resp.NextPage == 0 {
+				break
+			}
+			opt.Page = resp.NextPage
 		}
 
 		return prListLoadedMsg(items)
